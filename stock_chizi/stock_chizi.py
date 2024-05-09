@@ -62,7 +62,7 @@ def create_rps():
 # 条件二、收盘价 
     # 在过去的30天收盘超过200日均线或者收盘价超过120日均线或者收盘价超过90日均线 的天数大于等于28天
     # 过去7天收盘价>20日均线的天数大于等于4天
-    # 
+
 
 def create_avg():
     host = '175.178.92.143'
@@ -163,6 +163,8 @@ def create_chizi():
     cursor.execute(sql)
     conn.commit()
 
+# 条件三
+# 首次进入池子到目前<=8天,累计出现次数大于等于5天
 
 if __name__ == '__main__':
     create_rps()
