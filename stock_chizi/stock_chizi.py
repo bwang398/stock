@@ -4,8 +4,8 @@ from pymysql.constants import CLIENT
 import datetime
 import pandas as pd
 
-# 条件一，rps(rps250+rps130>=170 或者 (25_score>40_score>60_score>90_score and 25_score>85) 
-    # 或者(25_score>90 and 40_score>90 and 60_score>90 and 90_score>90 ))
+# 条件一，rps(rps250+rps130>=170 或者 (25_score>40_score>60_score>90_score and 25_score>90) 
+    # 或者(25_score>90 and 40_score>90 and 60_score>90 and 90_score>90))
     # 实现3900筛选完500只
 def create_rps():
     host = '175.178.92.143'
@@ -32,7 +32,7 @@ def create_rps():
         ,250_score
         ,case when (
                 (130_score+250_score)>=170 
-                or (25_score>40_score>60_score>90_score and 25_score>85) 
+                or (25_score>40_score>60_score>90_score and 25_score>90 and 40_score>80) 
                 or (25_score>90 and 40_score>90 and 60_score>90 and 90_score>90)
                 ) then 1 else 0 end as is_rps
         ,report_time
@@ -61,8 +61,8 @@ def create_rps():
 
 # 条件二、收盘价 
     # 在过去的30天收盘超过200日均线或者收盘价超过120日均线或者收盘价超过90日均线 的天数大于等于28天
-    # 过去5天的10日均线和20日均线保持上升状态
-    # 过去5天10日均线>20日均线的天数大于等于1天
+    # 过去7天收盘价>20日均线的天数大于等于4天
+    # 
 
 def create_avg():
     host = '175.178.92.143'
@@ -81,6 +81,7 @@ def create_avg():
         ,sum(close_90)   as close_90_cnt
         ,sum(close_120)  as close_120_cnt
         ,sum(close_200)  as close_200_cnt
+        ,sum(close_20)   as close_20_cnt
     from 
     (select 
         stock_code   
@@ -94,6 +95,8 @@ def create_avg():
         ,case when close_price>90_avg_price  then 1 else 0 end as close_90
         ,case when close_price>120_avg_price then 1 else 0 end as close_120
         ,case when close_price>200_avg_price then 1 else 0 end as close_200
+        ,case when report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 7,1)
+              and  close_price>20_avg_price then 1 else 0 end as close_20
         ,report_time
     from stock_avg_price 
     where report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 30,1)
@@ -162,9 +165,9 @@ def create_chizi():
 
 
 if __name__ == '__main__':
-    # create_rps()
+    create_rps()
     # create_avg()
-    create_chizi()
+    # create_chizi()
 
 
 # 在RPS股价相对强度优先一切的原则下，我最喜欢的第一买点是经历过充分调整之后的第一个启动的口袋支点。

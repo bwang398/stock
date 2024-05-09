@@ -19,9 +19,22 @@ def get_code():
     conn = pymysql.connect(host=host, user=user, password='141812wa', database=database, port=port, charset="utf8")
     cursor = conn.cursor()
     sql1 = """
-    select * from tmp_stock_chizi where is_rps =1 and is_avg=1 order by close_price desc
+    select stock_name,250_score from stock_rps where report_time='2024-05-08' order by 250_score desc limit 50
     """
-    cursor.execute(sql1)
+    sql2 = """
+    select count(1) from tmp_stock_chizi_rps_01 ta 
+    left join tmp_stock_chizi_avg_01 tb on ta.stock_code=tb.stock_code 
+    where is_rps=1 and (tb.close_90_cnt>=28 or tb.close_120_cnt>=28 or close_200_cnt>=28);
+    """
+    sql3 = """
+    select ta.stock_name,ta.close_price from tmp_stock_chizi_rps_01 ta 
+    left join tmp_stock_chizi_avg_01 tb on ta.stock_code=tb.stock_code 
+    where is_rps=1 and (tb.close_90_cnt<28 and tb.close_120_cnt<28 and close_200_cnt<28)
+    order by close_price desc;
+    """
+
+
+    cursor.execute(sql3)
     conn.close()
     return cursor.fetchall()
 
