@@ -77,10 +77,10 @@ def create_avg():
     create table tmp_stock_chizi_avg_01 as 
     select 
         stock_code   
-        ,stock_name   
         ,sum(close_90)   as close_90_cnt
         ,sum(close_120)  as close_120_cnt
         ,sum(close_200)  as close_200_cnt
+        ,sum(close_20)   as close_20_cnt
     from 
     (select 
         stock_code   
@@ -94,13 +94,14 @@ def create_avg():
         ,case when close_price>90_avg_price  then 1 else 0 end as close_90
         ,case when close_price>120_avg_price then 1 else 0 end as close_120
         ,case when close_price>200_avg_price then 1 else 0 end as close_200
+        ,case when report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 6,1) 
+              and close_price>20_avg_price then 1 else 0 end as close_20
         ,report_time
     from stock_avg_price 
     where report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 30,1)
     )ta 
     group by 
         stock_code   
-        ,stock_name  
     ;
 
     drop table  if exists tmp_stock_chizi_avg_02;
@@ -108,26 +109,35 @@ def create_avg():
     select 
         stock_code   
         ,stock_name   
-        ,sum(ABS(CAST(10_avg_rn as SIGNED)-cast(rn as SIGNED))) as 10_avg
-        ,sum(ABS(CAST(20_avg_rn as SIGNED)-cast(rn as SIGNED))) as 20_avg   
+        ,close_price
+        ,rn
+        ,rm
+        ,report_time
     from 
     (select 
         stock_code   
         ,stock_name   
-        ,close_price  
-        ,10_avg_price
-        ,20_avg_price
+        ,close_price
+        ,row_number() over(partition by stock_code order by close_price desc) as rn
+        ,row_number() over(partition by stock_code order by report_time desc) as rm
         ,report_time
-        ,row_number() over(partition by stock_code order by report_time desc) as rn 
-        ,row_number() over(partition by stock_code order by 10_avg_price desc) as 10_avg_rn 
-        ,row_number() over(partition by stock_code order by 20_avg_price desc) as 20_avg_rn 
-    from stock_avg_price 
-    where report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 5,1)
+    from stock_price_info 
+    where report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 90,1)
     )ta 
-    group by
-        stock_code   
-        ,stock_name
     ;
+
+    drop table  if exists tmp_stock_chizi_avg_03;
+    create table tmp_stock_chizi_avg_03 as 
+    select 
+        stock_code
+        ,sum(case when rn<=20 then 1 else 0 end) as max_cnt
+        ,sum(case when rm<=10 and rn<=10 then 1 else 0 end) as max_10_cnt 
+        ,sum(case when rn=1 then 1 else 0 end) as max_1_cnt
+    from tmp_stock_chizi_avg_02 where rm<=20
+    group by stock_code
+    ;
+
+
     """
     cursor.execute(sql)
     conn.commit()
@@ -149,21 +159,24 @@ def create_chizi():
         ta.stock_code
         ,ta.stock_name
         ,ta.close_price
-        ,ta.is_rps
-        ,case when tb.close_90_cnt>=28 or tb.close_120_cnt>=28 or tb.close_200_cnt>=28 then 1
-            else 0 end as is_avg
-        ,case when tc.10_avg+tc.20_avg<=2 then 1 else 0 end as is_trend
+        ,case when tc.max_cnt>=15 then 4
+              when max_10_cnt>=7  then 3
+              when max_10_cnt>=5  then 2
+              when max_1_cnt=1    then 1
+              else 0 end as is_rank
     from tmp_stock_chizi_rps_01 ta 
     left join tmp_stock_chizi_avg_01 tb on ta.stock_code=tb.stock_code
-    left join tmp_stock_chizi_avg_02 tc on ta.stock_code=tc.stock_code
+    left join tmp_stock_chizi_avg_03 tc on ta.stock_code=tc.stock_code
+    where ta.is_rps=1 and (tb.close_90_cnt>=28 or tb.close_120_cnt>=28 or tb.close_200_cnt>=28) 
+        and close_20_cnt>=4
     """
     cursor.execute(sql)
     conn.commit()
 
 
 if __name__ == '__main__':
-    # create_rps()
-    # create_avg()
+    create_rps()
+    create_avg()
     create_chizi()
 
 

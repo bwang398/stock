@@ -19,7 +19,7 @@ def get_code():
     conn = pymysql.connect(host=host, user=user, password='141812wa', database=database, port=port, charset="utf8")
     cursor = conn.cursor()
     sql1 = """
-    select * from tmp_stock_chizi where is_rps =1 and is_avg=1 order by close_price desc
+    select * from tmp_stock_chizi order by is_rank desc,close_price desc
     """
     cursor.execute(sql1)
     conn.close()
