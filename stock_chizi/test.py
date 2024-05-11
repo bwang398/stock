@@ -27,10 +27,7 @@ def get_code():
     where is_rps=1 and (tb.close_90_cnt>=28 or tb.close_120_cnt>=28 or close_200_cnt>=28);
     """
     sql3 = """
-    select ta.stock_name,ta.close_price from tmp_stock_chizi_rps_01 ta 
-    left join tmp_stock_chizi_avg_01 tb on ta.stock_code=tb.stock_code 
-    where is_rps=1 and (tb.close_90_cnt<28 and tb.close_120_cnt<28 and close_200_cnt<28)
-    order by close_price desc;
+    select * from tmp_stock_chizi 
     """
 
 
