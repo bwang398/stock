@@ -18,20 +18,15 @@ def get_code():
     port = 3306
     conn = pymysql.connect(host=host, user=user, password='141812wa', database=database, port=port, charset="utf8")
     cursor = conn.cursor()
-    sql1 = """
-<<<<<<< HEAD
-    select * from tmp_stock_chizi order by is_rank desc,close_price desc
-=======
-    select stock_name,250_score from stock_rps where report_time='2024-05-08' order by 250_score desc limit 50
->>>>>>> 8e88ae7d175ea6d5561703ae7b793004242987bf
-    """
     sql2 = """
-    select count(1) from tmp_stock_chizi_rps_01 ta 
-    left join tmp_stock_chizi_avg_01 tb on ta.stock_code=tb.stock_code 
-    where is_rps=1 and (tb.close_90_cnt>=28 or tb.close_120_cnt>=28 or close_200_cnt>=28);
+    select 
+        report_time
+    from stock_price_info ta where stock_code='603790' 
+     and order by report_time desc 
     """
+
     sql3 = """
-    select * from tmp_stock_chizi 
+    SELECT * from information_schema.`PROCESSLIST` WHERE Time > 1000 AND USER = 'xxx' ORDER BY TIME desc
     """
 
 
