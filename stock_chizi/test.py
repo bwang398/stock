@@ -20,15 +20,33 @@ def get_code():
     cursor = conn.cursor()
     sql2 = """
     select 
-        report_time
-    from stock_price_info ta where stock_code='603790' 
-     and order by report_time desc 
+        count(1)
+    from stock_rps where report_time='2024-05-20'
     """
 
     sql3 = """
-    SELECT * from information_schema.`PROCESSLIST` WHERE Time > 1000 AND USER = 'xxx' ORDER BY TIME desc
+    SELECT * from tmp_stock_chizi_avg_01 where stock_code='002773'
     """
-
+    sql4 = """
+    select 
+        stock_code   
+        ,stock_name 
+        ,report_time
+        ,close_price  
+        ,10_avg_price
+        ,20_avg_price
+        ,240_avg_price
+        ,case when close_price>240_avg_price   then 1 else 0 end as close_240
+        ,case when 10_avg_price>240_avg_price  then 1 else 0 end as avg_10_240
+        ,case when 20_avg_price>240_avg_price  then 1 else 0 end as avg_20_240
+    from stock_avg_price 
+    where report_time>=(select data_day from stu.dim_calendar where data_day<=date('2024-05-20') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 29,1)
+         and report_time<=(select data_day from stu.dim_calendar where data_day<=date('2024-05-20') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
+    order by report_time desc limit 10
+    """
+    sql5 = """
+    SELECT * from tmp_stock_chizi_tj order by close_price desc
+    """
 
     cursor.execute(sql3)
     conn.close()

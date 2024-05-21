@@ -20,7 +20,7 @@ def get_code():
     sql1 = """
     select cast(data_day as char) from stu.dim_calendar 
     where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 
-    and data_day>='2024-04-08' and  data_day<='2024-05-17' order by data_day asc 
+    and data_day>='2024-01-01' and  data_day<='2024-05-20' order by data_day asc 
     """
     cursor.execute(sql1)
     return cursor.fetchall()
@@ -38,10 +38,10 @@ def create_table(data_time):
     create table tmp_stock_avg_1 as 
     select 
         stock_code
-        ,case when sum_5!=5     then null else sum_5_price*1.0/sum_5     end as 5_avg_price
-        ,case when sum_10!=10   then null else sum_10_price*1.0/sum_10   end as 10_avg_price
-        ,case when sum_20!=20   then null else sum_20_price*1.0/sum_20   end as 20_avg_price      
-        ,case when sum_50!=50   then null else sum_50_price*1.0/sum_50   end as 50_avg_price     
+        ,case when sum_5=0      then null else sum_5_price*1.0/sum_5     end as 5_avg_price
+        ,case when sum_10=0     then null else sum_10_price*1.0/sum_10   end as 10_avg_price
+        ,case when sum_20=0     then null else sum_20_price*1.0/sum_20   end as 20_avg_price      
+        ,case when sum_50=0     then null else sum_50_price*1.0/sum_50   end as 50_avg_price     
         ,case when sum_120<118  then null else sum_120_price*1.0/sum_120 end as 120_avg_price
         ,case when sum_200<190  then null else sum_200_price*1.0/sum_200 end as 200_avg_price
         ,case when sum_240<230  then null else sum_240_price*1.0/sum_240 end as 240_avg_price
@@ -106,7 +106,7 @@ def create_table(data_time):
                  ) as sum_240
     from stock_price_info
     where report_time<=(select data_day from stu.dim_calendar where data_day<=date('{data_time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
-     and  report_time>=(select data_day from stu.dim_calendar where data_day<=date('{data_time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 199,1)
+     and  report_time>=(select data_day from stu.dim_calendar where data_day<=date('{data_time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 250,1)
     group by stock_code
     )aa where sum_120>=118  and sum_5=5 and sum_10=10 and sum_20=20 and sum_50=50
     ;
