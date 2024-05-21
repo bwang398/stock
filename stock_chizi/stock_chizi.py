@@ -69,10 +69,16 @@ def create_rps(datatime):
     # and 近30日收盘价超过240日均线 的天数超过25天
     #  筛选后600只
 # 条件三
-    # 近10日 收盘价>10日线+近10日 收盘价>20日线的天数的天数大于10
+    # 近7日 收盘价>10日线大于等于3天 and 近7日 收盘价>20日线的天数的天数大于等于4天
+    # and 近5日 10日线大于20日线大于等于3天
 # 条件四
+    # 10日线和20日线趋势向上
+
+    # 最近10日
+
 
 # 条件五 (排序)
+# 首次进入池子到目前<=8天,累计出现次数大于等于5天
 
     
 
@@ -109,10 +115,10 @@ def create_avg(datatime):
         ,case when report_time>=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 9,1)
                  and report_time<=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
                  and close_price>10_avg_price then 1 else 0 end as close_10
-        ,case when report_time>=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 9,1)
+        ,case when report_time>=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 6,1)
                  and report_time<=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
                  and close_price>20_avg_price then 1 else 0 end as close_20
-        ,case when report_time>=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 9,1)
+        ,case when report_time>=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 4,1)
                  and report_time<=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
                  and 10_avg_price>20_avg_price then 1 else 0 end as avg_10_20
         ,case when close_price>240_avg_price   then 1 else 0 end as close_240
@@ -160,7 +166,7 @@ def create_jbm():
 
 
 # 池子
-# 一、满足条件一且满足条件二的有390
+# 一、满足条件一、满足条件二的、满足条件三的有270
 
 def create_chizi():
     host = '175.178.92.143'
@@ -181,7 +187,7 @@ def create_chizi():
     from tmp_stock_chizi_rps_01 ta 
     left join tmp_stock_chizi_avg_01 tb on ta.stock_code=tb.stock_code
     where ta.is_rps=1 and (tb.close_240>=25 and tb.avg_10_240>=25 and tb.avg_20_240>=25)
-        and (close_10+close_20>10 and tb.avg_10_20>=3)
+        and (close_10>=3 and close_20>=4 and tb.avg_10_20>=3)
     ;
 
     # drop table if exists tmp_stock_chizi;
@@ -250,8 +256,7 @@ def create_chizi():
     cursor.execute(sql)
     conn.commit()
 
-# 条件三
-# 首次进入池子到目前<=8天,累计出现次数大于等于5天
+
 
 if __name__ == '__main__':
     # datetimes=get_code()

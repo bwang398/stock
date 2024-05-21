@@ -45,10 +45,10 @@ def get_code():
     order by report_time desc limit 10
     """
     sql5 = """
-    SELECT * from tmp_stock_chizi_tj order by close_price desc
+    SELECT count(1) from tmp_stock_chizi_tj order by close_price desc
     """
 
-    cursor.execute(sql3)
+    cursor.execute(sql5)
     conn.close()
     return cursor.fetchall()
 
