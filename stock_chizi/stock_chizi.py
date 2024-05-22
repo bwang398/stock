@@ -74,7 +74,7 @@ def create_rps(datatime):
 # 条件四
     # 10日线和20日线趋势向上
 
-    # 最近10日
+    # 排除ST的，连续三年利润小于一千万的
 
 
 # 条件五 (排序)
@@ -130,6 +130,31 @@ def create_avg(datatime):
          and report_time<=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
     )ta group by stock_code
     ;
+
+    drop table  if exists tmp_stock_chizi_avg_02;
+    create table tmp_stock_chizi_avg_02 as
+    select 
+        stock_code
+        ,max(is_close_10)  as is_close_10
+        ,max(is_avg_10_20) as is_avg_10_20
+    from 
+    (select 
+        stock_code   
+        ,stock_name   
+        ,close_price  
+        ,10_avg_price
+        ,20_avg_price
+        ,case when close_price<10_avg_price then 1 else 0 end as is_close_10
+        ,case when 10_avg_price<20_avg_price then 1 else 0 end as is_avg_10_20
+        ,report_time
+    from stock_avg_price 
+    where report_time>=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 3,1)
+         and report_time<=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
+    )aa
+    group by stock_code
+    ;
+
+
     """.format(time=datatime)
     cursor.execute(sql)
     conn.commit()
@@ -160,6 +185,18 @@ def create_jbm():
       ,row_number() over(partition by security_code,substr(report_date,6,5) order by report_date desc) as rm 
     from dongcai_yjbb where substr(report_date,1,4)>='2019'
     ;
+
+    drop table if exists tmp_stock_chizi_jbm_2;
+    create table tmp_stock_chizi_jbm_2 as
+    select 
+        security_code
+        ,sum(case when parent_netprofit<10000000 then 1 else 0 end) as profit_cnt
+        ,sum(case when ystz<-10 then 1 else 0 end) as ystz_cnt
+    from  tmp_stock_chizi_jbm_1
+    where substr(report_date,6,5)='12-31' and rm<=3
+    group by security_code
+    ;
+
     """
     cursor.execute(sql)
     conn.commit()
@@ -168,7 +205,7 @@ def create_jbm():
 # 池子
 # 一、满足条件一、满足条件二的、满足条件三的有270
 
-def create_chizi():
+def create_chizi(datatime):
     host = '175.178.92.143'
     user = 'root'
     port = 3306
@@ -190,69 +227,56 @@ def create_chizi():
         and (close_10>=3 and close_20>=4 and tb.avg_10_20>=3)
     ;
 
-    # drop table if exists tmp_stock_chizi;
-    # create table tmp_stock_chizi as 
-    # select 
-    #     ta.stock_code  
-    #     ,taa.stock_code as xueqiu_stock_code
-    #     ,ta.stock_name   
-    #     ,ta.close_price
-    #     ,ta.pe
-    #     ,ta.inc_amount_per
-    #     ,ta.market_capital
-    #     ,tb.main_business
-    #     ,tb.businessProducts as main_guanzhu
-    #     ,ta.report_time
-    # from 
-    # (select 
-    #     stock_code   
-    #     ,stock_name   
-    #     ,close_price
-    #     ,pe
-    #     ,inc_amount_per
-    #     ,market_capital
-    #     ,report_time
-    # from tmp_stock_chizi_close_01
-    # where rm=1
-    # )ta 
-    # left join dongcai_stock_info tb on ta.stock_code=tb.security_code
-    # inner join tmp_stock_chizi_tj tc on ta.stock_code=tc.stock_code
-    # left join xueqiu_stock_info taa on ta.stock_code=substr(taa.stock_code,3,6)
-    # left join (
-    # select 
-    #     stock_code
-    #     ,sum(case when report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 4,1)
-    #       and report_time<=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 1,1)
-    #       then 1 else 0 end) as sum_5_cnt
-    #     ,sum(case when report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 9,1)
-    #       and report_time<=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 1,1)
-    #       then 1 else 0 end) as sum_10_cnt
-    #     ,sum(case when report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 19,1)
-    #       and report_time<=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 1,1)
-    #       then 1 else 0 end) as sum_20_cnt
-    #     ,sum(case when report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 39,1)
-    #       and report_time<=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 1,1)
-    #       then 1 else 0 end) as sum_40_cnt
-    # from stock_chizi
-    # where report_time>=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 39,1)
-    #       and report_time<=(select data_day from stu.dim_calendar where data_day<=date(now()) and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 1,1)
-    # group by stock_code
-    # )td on ta.stock_code=td.stock_code
-    # where tc.is_rank>0
-    # ;
+    drop table if exists tmp_stock_chizi;
+    create table tmp_stock_chizi as 
+    select 
+        ta.stock_code  
+        ,taa.stock_code as xueqiu_stock_code
+        ,ta.stock_name   
+        ,ta.close_price
+        ,ta.pe
+        ,ta.inc_amount_per
+        ,ta.market_capital
+        ,tb.main_business
+        ,tb.businessProducts as main_guanzhu
+        ,case when tac.is_close_10=1 then 3
+              when tac.is_avg_10_20=1 then 2
+              else 1 end as is_rank
+        ,ta.report_time
+    from 
+    (select 
+        stock_code   
+        ,stock_name   
+        ,close_price
+        ,pe
+        ,inc_amount_per
+        ,market_capital
+        ,report_time
+    from stock_price_info 
+    where report_time=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1)
+    and stock_name not like '%ST%'
+    )ta 
+    left join dongcai_stock_info tb on ta.stock_code=tb.security_code
+    inner join tmp_stock_chizi_tj tc on ta.stock_code=tc.stock_code
+    left join xueqiu_stock_info taa on ta.stock_code=substr(taa.stock_code,3,6)
+    left join tmp_stock_chizi_jbm_2 tab on ta.stock_code=tab.security_code
+    left join tmp_stock_chizi_avg_02 tac on ta.stock_code=tac.stock_code
+    where tab.profit_cnt<3 or tab.ystz_cnt<3 or tab.profit_cnt is null or tab.ystz_cnt is null
+    ;
 
-    # replace stock_chizi 
-    # select 
-    #     stock_code  
-    #     ,stock_name   
-    #     ,close_price
-    #     ,pe
-    #     ,inc_amount_per
-    #     ,market_capital
-    #     ,report_time
-    #     ,is_rank
-    # from tmp_stock_chizi;
-    """
+    delete from stock_chizi where report_time=(select data_day from stu.dim_calendar where data_day<=date('{time}') and is_weekend=0 and is_holiday=0 and is_week=1 order by data_day desc limit 0,1);
+    replace stock_chizi 
+    select 
+        stock_code  
+        ,stock_name   
+        ,close_price
+        ,pe
+        ,inc_amount_per
+        ,market_capital
+        ,report_time
+        ,is_rank
+    from tmp_stock_chizi;
+    """.format(time=datatime)
     cursor.execute(sql)
     conn.commit()
 
@@ -263,11 +287,11 @@ if __name__ == '__main__':
     # for datetime in datetimes:
     #     print("日期："+str(datetime[0]))
     #     create_rps(datetime[0])
-    datetime = '2024-05-20'
+    datetime = datetime.datetime.now().strftime('%Y-%m-%d')
     create_rps(datetime)
     create_avg(datetime)
-    # create_jbm()
-    create_chizi()
+    create_jbm()
+    create_chizi(datetime)
 
 
 # 在RPS股价相对强度优先一切的原则下，我最喜欢的第一买点是经历过充分调整之后的第一个启动的口袋支点。
